@@ -3,7 +3,7 @@ The project SatisMap is an interactive web application mapping and displaying va
 The application was created using R [2] and shiny [3]. A running version can be found at https://nilssommer.shinyapps.io/satismap/.
 
 ### Project Report
-In the Project Report, ...
+The project report documents the objectives of the project, the methods and data used, and the web-application in detail.
 
 ### Folder 'satipmap'
 This folder contains the main application code (R Shiny) and preprocessed data. 'SHP20_P.Rda' contains the data from the Swiss Household Panel [1], reduced to the focus variables for the project and with some changes to the data structure of some variables. 'varkey.Rda' contains iformation for each variable to be displayed in SatisMap. 'cantons2.Rda' contains the geospatial data necessary for plotting.
