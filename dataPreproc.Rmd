@@ -1,0 +1,215 @@
+---
+title: "CAS M1"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+# Packages
+
+Packages for Data
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(haven)
+library(openxlsx)
+library(foreign)
+library(psych)
+library(RColorBrewer)
+library(sf)
+library(raster)
+library(spData)
+library(tmap)    # for static and interactive maps
+library(leaflet) # for interactive maps
+library(ggplot2) # tidyverse data visualization package
+library(shiny)
+library(DescTools)
+```
+
+# Data
+
+## Geodata
+
+```{r}
+cantons <- st_read("data/ag-b-00.03-875-gg22/ggg_2022_LV95/shp/g1k22.shp")
+cantons2 <- cantons %>% 
+  mutate(canton = as.factor(KTNR) %>% 
+           recode(
+             `19` = 'Aargau',
+             `16` = 'Appenzell Innerrhoden',
+             `15` = 'Appenzell Ausserrhoden',
+             `2` = 'Berne / Bern',
+             `12` = 'Basel-City',
+             `13` = 'Basel-Country',
+             `10` = 'Fibourg / Freiburg',
+             `25` = 'Geneva',
+             `8` = 'Glarus',
+             `18` = 'Graubünden',
+             `26` = 'Jura',
+             `3` = 'Lucerne',
+             `24` = 'Neuchatel',
+             `7` = 'Nidwalden',
+             `6` = 'Obwalden',
+             `17` = 'St. Gallen',
+             `14` = 'Schaffhausen',
+             `11` = 'Solothurn',
+             `5` = 'Schwyz',
+             `20` = 'Thurgau',
+             `21` = 'Ticino',
+             `4` = 'Uri',
+             `22` = 'Vaud',
+             `23` = 'Valais / Wallis',
+             `9` = 'Zug',
+             `1` = 'Zurich'
+             ))
+
+cantons2
+save(cantons2, file = "data/cantons2.Rda")
+```
+
+## SHP
+
+raw data
+```{r}
+SHP20_P_USER <- read_sav("data/SHP20_P_USER.sav")
+SHP20_H_USER <- read_sav("data/SHP20_H_USER.sav")
+varkey <- read.xlsx("data/varkey.xlsx")
+save(varkey, file = "satismap/data/varkey.Rda") #re-save as .Rda
+```
+
+merge households
+```{r}
+SHP20_full <- SHP20_P_USER %>% 
+  merge(SHP20_H_USER, by = "IDHOUS20", all.x = T) %>% 
+  distinct(IDPERS, .keep_all = T)
+```
+
+Rename and reduce Data
+```{r}
+SHP20_P <- SHP20_full %>% 
+  mutate(
+    sex = case_match(SEX20, 1 ~ 0, 2 ~ 1), #Note: Sex --> 0 = male, 1 = female
+    age = AGE20,
+    canton = CANTON20,
+    satLife = P20C44,
+    satHealth = P20C02,
+    satStudies = P20YTH01,
+    satFinances = P20I01,
+    satJob = P20W228,
+    satRelat = P20QL04,
+    happyPartner = P20F54,
+    satFreetime = P20A05,
+    satDemocracy = P20P02,
+    negAff = P20C17,
+    posAff = P20C18,
+    womenPenalized = P20P20,
+    ownSexPenalized = P20P21,
+    womenPromotion = P20P22,
+    education =  case_match(ISCED20, 10 ~ 1, 20 ~ 2, 31 ~ 3, 32 ~ 3, 33 ~ 3, 41 ~ 4, 51 ~ 5, 51 ~ 5), #simplify education coding
+    workStatus = case_match(WSTAT20, 1 ~ 1, 2 ~ 0, 3 ~ NA), 
+    SES = 10 - ESECMJ20,
+    incomeYearIndiv = I20PTOTG,
+    incomeYearHouse = I20HTYG,
+    nrOwnKids = OWNKID20
+  ) %>% 
+  mutate(
+    education =  case_when(
+      EDCAT20 == 16 ~ 6,
+      .default = education)
+  ) %>% 
+  
+  dplyr::select(IDPERS, sex:nrOwnKids) %>% 
+  filter(age >= 16) %>% 
+  mutate(across(everything(), as.numeric)) %>% 
+  mutate(canton = as.factor(canton) %>% 
+           recode(
+             `1` = 'Aargau',
+             `2` = 'Appenzell Innerrhoden',
+             `3` = 'Appenzell Ausserrhoden',
+             `4` = 'Berne / Bern',
+             `5` = 'Basel-City',
+             `6` = 'Basel-Country',
+             `7` = 'Fibourg / Freiburg',
+             `8` = 'Geneva',
+             `9` = 'Glarus',
+             `10` = 'Graubünden',
+             `11` = 'Jura',
+             `12` = 'Lucerne',
+             `13` = 'Neuchatel',
+             `14` = 'Nidwalden',
+             `15` = 'Obwalden',
+             `16` = 'St. Gallen',
+             `17` = 'Schaffhausen',
+             `18` = 'Solothurn',
+             `19` = 'Schwyz',
+             `20` = 'Thurgau',
+             `21` = 'Ticino',
+             `22` = 'Uri',
+             `23` = 'Vaud',
+             `24` = 'Valais / Wallis',
+             `25` = 'Zug',
+             `26` = 'Zurich'
+             ),
+         IDPERS = as.factor(IDPERS),
+         sexCat = case_match(sex, 0 ~ "m", 1 ~ "f") %>% as.factor())
+  
+```
+
+### Quick description
+
+```{r}
+desc <- SHP20_P %>% dplyr::select(sex, workStatus, age, satLife, satRelat, happyPartner, satHealth, satStudies, satFinances, satJob, satFreetime, satDemocracy, negAff, posAff, womenPenalized, ownSexPenalized, womenPromotion, education, SES, incomeYearIndiv, incomeYearHouse, nrOwnKids) %>%  describe() %>% round(2)
+desc
+write.xlsx(desc, file = "data/desc.xlsx")
+```
+
+```{r}
+SHP20_P %>% mutate(workStatus = workStatus %>% as.factor()) %>% summary()
+```
+
+Save as RData and Excel
+```{r}
+save(SHP20_P, file = "satismap/data/SHP20_P.Rda")
+write.xlsx(SHP20_P, file = "data/SHP20_P.xlsx")
+```
+
+
+### Simple plots
+
+Canton / Sex 
+```{r}
+my_colors <- RColorBrewer::brewer.pal(3, "YlOrBr")[2:3]
+
+SHP20_Sex_Canton <- ggplot(data = SHP20_P, aes(x = canton, fill = sexCat)) +
+  geom_bar(position = position_dodge(), color = "black") +
+  scale_fill_manual(name = "Sex", labels = c("Female", "Male"), values = my_colors) +
+  labs(x = "Canton", y = "Number of Participants") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+SHP20_Sex_Canton
+
+ggsave("plots/SHP_20_SexCanton.png", plot = SHP20_Sex_Canton, width = 8, height = 5)
+```
+
+Age / Sex
+```{r}
+SHP20_Sex_Age <- ggplot(data = SHP20_P, aes(x = age, fill = sexCat)) +
+  geom_histogram(binwidth = 5, color = "black") +
+  scale_fill_manual(name = "Sex", labels = c("Female", "Male"), values = my_colors) +
+  facet_wrap(~sexCat) +
+  labs(x = "Age (Years)", y = "Number of Participants") +
+  theme_classic()+
+  theme(
+  strip.background = element_blank(),
+  strip.text.x = element_blank()
+)
+
+SHP20_Sex_Age
+
+ggsave("plots/SHP_20_SexAge.png", plot = SHP20_Sex_Age, width = 8, height = 3)
+```
+
+
+
+
+
