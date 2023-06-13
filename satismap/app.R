@@ -187,14 +187,11 @@ ui <- shinyUI(navbarPage("SatisMap",
                    ),
                    tabPanel("References", # Tab References
                             mainPanel(
-                              HTML("SatisMap was created with R [1] and the package Shiny [2]. Data displayed in this app was retrieved with permission from the Swiss Household Panel [3] and the Federal Statistical Office [4].
-                                See Github <a>https://github.com/nilssommer1/SatisMap</a> for programming code and a more detailed description."),
-                              br(),
-                              br(),
-                              HTML("[1] The R Project for Statistical Computing (<a>https://www.r-project.org/</a>) <br>
-                                   [2] Shiny; Rstudio (<a>https://shiny.posit.co/</a>) <br>
-                                   [3] Swiss Household Panel; Lausanne: FORS (<a>https://forscenter.ch/projekte/swiss-household-panel/</a>) <br>
-                                   [4] Generalisierte Gemeindegrenzen: Geodaten; Federal Statistical Office, Switzerland (<a>https://www.bfs.admin.ch/bfs/en/home/services/geostat/swiss-federal-statistics-geodata/administrative-boundaries/generalized-boundaries-local-regional-authorities.assetdetail.22484210.html</a>) "),
+                              HTML("SatisMap was created with <a href = https://www.r-project.org/> R (the R Project for Statistical Computing) </a> and 
+                              the <a href = https://shiny.posit.co/> package Shiny </a>. 
+                              Data displayed in this app was retrieved with permission from the <a href = https://forscenter.ch/projekte/swiss-household-panel/> Swiss Household Panel </a> 
+                              and the <a href = https://www.bfs.admin.ch/bfs/en/home/services/geostat/swiss-federal-statistics-geodata/administrative-boundaries/generalized-boundaries-local-regional-authorities.assetdetail.22484210.html> Federal Statistical Office of Switzerland </a>. <br>
+                                See <a href = https://github.com/nilssommer1/SatisMap> Github </a> for programming code and a more detailed description."),
                               width = 6)
                    )
 
